@@ -64,8 +64,10 @@ class BaseAgent(CaptureAgent):
 
     IMPORTANT: This method may run for at most 15 seconds.
     """
-    self.enemies = [gameState.getAgentPosition(self.getOpponents(gameState)[0]),gameState.getAgentPosition(self.getOpponents(gameState)[1])]
-    print (self.enemies)
+    
+    self.nextActionOverride = None
+    self.enemies = self.getOpponents(gameState)
+
     '''
     Make sure you do not delete the following line. If you would like to
     use Manhattan distances instead of maze distances in order to save
@@ -102,7 +104,7 @@ class BaseAgent(CaptureAgent):
           current = current.parent
         return path[::-1]
       children = []
-      for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+      for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
         node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
         new_node = Node(current_node, node_position)
         if gameState.hasWall(node_position[0],node_position[1]):
@@ -122,38 +124,35 @@ class BaseAgent(CaptureAgent):
             continue
         open_list.append(child)
 
-  def chooseAction(self, gameState):
+  def chooseDirection(self, gameState, destination):
     actions = gameState.getLegalActions(self.index)
-    position = (5,1)
     #gets the agents position and stores in x and y
     x, y = gameState.getAgentPosition(self.index)
     #finds the path from the current position to (5,1)
-    path = self.getPath(gameState,position)
+    path = self.getPath(gameState,destination)
     #get the agents position minus the next step in the path
-    x = path[1][0] - x
-    y = path[1][1] - y
-    print(self.getMazeDistance(gameState.getAgentPosition(self.index),(5,1)))
-    print('Current: ', gameState.getAgentPosition(self.index),'Next: ', path[1], 'Action: ',x,y)
-    if x is 0 and y is 1:
-      return 'North'
-    elif x is 0 and y is -1:
-      return 'South'
-    elif x is 1 and y is 0:
-      return 'East'
-    elif x is -1 and y is 0:
-      return 'West'
-    elif x is -1 and y is -1:
-      act = gameState.getLegalActions(self.index)
-      if 'North' in act:
-        act.remove('North')
-      if 'East' in act:
-        act.remove('East')
-      elif x is 1 and y is 1:
-        act = gameState.getLegalActions(self.index)
-        if 'South' in act:
-          act.remove('South')
-        if 'West' in act:
-          act.remove('West')
-      return random.choice(act)
-    else:
+    try:
+      x = path[1][0] - x
+      y = path[1][1] - y
+    except:
       return random.choice(actions)
+    if self.nextActionOverride is not None:
+      ret = self.nextActionOverride
+      self.nextActionOverride = None
+      return ret
+    else:
+      if x is 0 and y is 1:
+        return 'North'
+      elif x is 0 and y is -1:
+        return 'South'
+      elif x is 1 and y is 0:
+        return 'East'
+      elif x is -1 and y is 0:
+        return 'West'
+      else:
+        return random.choice(actions)
+
+
+
+  def chooseAction(self, gameState):
+    return self.chooseDirection(gameState,(5,1))
