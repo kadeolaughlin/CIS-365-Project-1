@@ -362,15 +362,32 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
       dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
       features['invaderDistance'] = min(dists)
 
-    dist = gameState.getAgentDistances()
+    #Computes agents noisy distance to the closest enemy agent
+    dist = self.getOpponents()
     features['invaderNoisyDistance'] = min(dist)
 
+    #FIND A WAY TO IGNORE ANY EMEMY WHO IS NOT PACMAN
 
+    #REVERSE WEIGHTS IF ISSCARED
+
+    #computes the distance from the start
+    distFromStart = self.getMazeDistance(self.start, gameState.getAgentPosition(self.index))
+    features['startDist'] = distFromStart
+
+    #computes the number of food left on our side
     currentFood = len(self.getFoodYouAreDefending(gameState).asList())
-    successorFood = len(self.getFoodYouAreDefending(successor).asList())
-    
+    successorFood = self.getFoodYouAreDefending(successor)
     if currentFood > successorFood:
       features['foodEaten'] = (currentFood-successorFood)
+
+    #dont go in the spots it has previously visited recently
+    if(gameState.getAgentPosition(self.index) in self.previousPositions):
+      features['beenBefore'] = 1
+    else:
+      features['beenBefore'] = 0
+
+    #
+    
 
     #pelletLocationx = self.getCapsulesYouAreDefending(gameState)[0]
     gameState.getAgentPosition(self.index)
@@ -382,4 +399,4 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
     return features
 
   def getWeights(self, gameState, action):
-    return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -20, 'stop': -100, 'reverse': -5, 'foodEaten': -5,'invaderNoisyDistance': -1}
+    return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -20, 'stop': -100, 'reverse': -5, 'foodEaten': -5,'invaderNoisyDistance': -1,'startDist': 100,'beenBefore':-5}
