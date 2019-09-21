@@ -363,12 +363,9 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
       features['invaderDistance'] = min(dists)
 
     #Computes agents noisy distance to the closest enemy agent
-    dist = self.getOpponents()
+    dist = gameState.getAgentDistances()
     features['invaderNoisyDistance'] = min(dist)
-
-    #FIND A WAY TO IGNORE ANY EMEMY WHO IS NOT PACMAN
-
-    #REVERSE WEIGHTS IF ISSCARED
+  
 
     #computes the distance from the start
     distFromStart = self.getMazeDistance(self.start, gameState.getAgentPosition(self.index))
@@ -386,8 +383,9 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
     else:
       features['beenBefore'] = 0
 
-    #
-    
+    #reverse the weights when pacman isscared
+
+    #use noisy distance of closest enemy only
 
     #pelletLocationx = self.getCapsulesYouAreDefending(gameState)[0]
     gameState.getAgentPosition(self.index)
