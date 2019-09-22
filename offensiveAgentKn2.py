@@ -63,11 +63,17 @@ class ReflexCaptureAgent(CaptureAgent):
     self.start = gameState.getAgentPosition(self.index)
     self.overrideAction = False
     self.overrideAct = None
+    self.previousPositions = []
 
   def chooseAction(self, gameState):
     """
     Picks among the actions with the highest Q(s,a).
     """
+    self.previousPositions += gameState.getAgentPosition(self.index)
+    if len(self.previousPositions)>10:
+      self.previousPositions.remove(self.previousPositions[0])
+      actions = gameState.getLegalActions(self.index)
+
     actions = gameState.getLegalActions(self.index)
 
     # You can profile your evaluation time by uncommenting these lines
