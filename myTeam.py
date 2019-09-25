@@ -342,9 +342,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                 ghostDistance = min([float(self.getMazeDistance(myPos, g.getPosition())) for g in
                                      ghosts])  # gets closest ghost loaction
                 features['fleeEnemy'] = ghostDistance
-                # if gameState.getAgentState(self.index).isPacman and gameState.isOnRedTeam(self.index) and ghostDistance != 0:
-                # print ghostDistance
-                # time.sleep(.25)
+                
         return features
 
     '''
