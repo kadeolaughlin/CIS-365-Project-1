@@ -50,7 +50,8 @@ class ReflexCaptureAgent(CaptureAgent):
     A base class for reflex agents that chooses score-maximizing actions
     """
 
-    openingMovesFinished = False
+    openingMovesFinished = False # Keeps track of whether the defensive agent completed opening moves or not
+    position = (0,0) # Arbitrary position chosen in middle of board for our defending ghost to get to
 
     def registerInitialState(self, gameState):
         self.start = gameState.getAgentPosition(self.index)
@@ -59,6 +60,12 @@ class ReflexCaptureAgent(CaptureAgent):
         self.overrideAction = False
         self.overrideAct = None
         self.previousPositions = []
+
+        # Assigns which defensive position to get to depending on which team the agent is on
+        if self.red:
+            self.position = (15, 7)
+        else:
+            self.position = (16, 8)
 
     def chooseAction(self, gameState):
         """
@@ -372,17 +379,14 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         # Get legal moves defender ghost can make
         actions = gameState.getLegalActions(self.index)
 
-        # Arbitrary chosen position in middle of board for our defending ghost to get to
-        position = (18, 8)
-
         # The next move our defender needs to make to get to designated position
-        path = self.getPath(gameState, position, None)
+        path = self.getPath(gameState, self.position, None)
 
         # Gets the current defender ghost's position on the board
         x, y = gameState.getAgentPosition(self.index)
 
         # Checks to see if the defender ghost's current position matches desired position
-        if position[0] is x and position[1] is y:
+        if self.position[0] is x and self.position[1] is y:
             self.openingMovesFinished = True
             return random.choice(actions)
 
@@ -434,9 +438,6 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
 
         if self.overrideAction is True:
             return self.overrideAct
-
-        if self.red:
-            print(zip(actions, values))
 
         foodLeft = len(self.getFood(gameState).asList())
 
