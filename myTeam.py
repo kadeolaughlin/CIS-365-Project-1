@@ -163,51 +163,69 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
 
     def chooseAction(self, gameState):
         """
-        Picks among the actions with the highest Q(s,a).
+        A heierachy of decisions to be made for an offence agent
         """
-        actions = gameState.getLegalActions(self.index)
+        actions = gameState.getLegalActions(self.index) #A list of all legal actions
 
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
-        values = [self.evaluate(gameState, a) for a in actions]
-        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
-
+        values = [self.evaluate(gameState, a) for a in actions] #evaluates all actoins for whichever makes pacmant closest to food
         maxValue = max(values)
+        
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-        bestAction = random.choice(bestActions)
 
-        foodLeft = len(self.getFood(gameState).asList())
+        bestAction = random.choice(bestActions)#A random choice of which best actions, always gets whichever gets pacman nerest to food, this may get overwritten
+        
 
-        ghostClose = False
-        hasCapsule = False
-        safeCapsule = False
+        bestAction = random.choice(bestActions) #Randomly chooses a legal action from actions, this will be the fallthrough action
 
-        features = self.getFeatures(gameState, 'Stop')
+        foodLeft = len(self.getFood(gameState).asList()) #how much food is left for the agent to get
 
-        foodList = self.getFood(gameState).asList()
+        ghostClose = False #Boolean for if an enemy ghost is near the pacman
+        hasCapsule = False #Boolean for if the power pellet can still be eaten, defaults to no for saftey
+        safeCapsule = False #Blooean to keep wheter getting the power pellet is safe
+        numCarrying = gameState.getAgentState(self.index).numCarrying #How much food the pacman has eaten without returning to its side
+        currentPos = gameState.getAgentPosition(self.index) #Agents position
+        turnsLeft =  300 - len(self.observationHistory)#how many turns the agent has left
 
-        if not gameState.getAgentState(self.index).isPacman:
+
+        features = self.getFeatures(gameState, 'Stop') #the list of features to be used
+
+        foodList = self.getFood(gameState).asList() #The list of food for the pacman to eat
+
+        
+        #checks if the agent is a pacman if not sets current location as the home location, where it tries to return to
+        if not gameState.getAgentState(self.index).isPacman: 
             self.home = gameState.getAgentPosition(self.index)
 
-        if features['fleeEnemy'] <= 5.0 and gameState.getAgentState(self.index).isPacman:
+
+        #checks if a ghost is within 5 spaces and sets ghostClose to true
+        if features['fleeEnemy'] <= 3.0 and gameState.getAgentState(self.index).isPacman:
             ghostClose = True
 
+        
+        #checks if the capsule was eaten if agent is red.
         if self.red:
             if gameState.getBlueCapsules():
                 hasCapsule = True
 
+        #checks if the power pellet was eaten if agent is blue
         if not self.red:
             if gameState.getRedCapsules():
                 hasCapsule = True
 
-        if ghostClose and hasCapsule and gameState.getAgentState(self.index).numCarrying >= 1:
+
+        '''
+        If a ghost is close and the capsule is still avalible, checks if home or the capsule is closer
+        and if the capsule is safe to eat. If the capsule is closer and safe to eat bestAction is then set
+         to whatever action minimizes the distance to it.
+        '''              
+        if ghostClose and hasCapsule and numCarrying >= 1:
             if self.red:
 
                 capsulePos = gameState.getBlueCapsules()[0]
-                ghostDistance1 = self.getFeatures(gameState, 'Stop')['fleeEnemy']
-                bestDist = self.getMazeDistance(gameState.getAgentPosition(self.index), capsulePos)
+                ghostDistance1 = features['fleeEnemy']
+                bestDist = self.getMazeDistance(currentPos, capsulePos)
 
-                if self.getMazeDistance(gameState.getAgentPosition(self.index), self.home) > bestDist:
+                if self.getMazeDistance(currentPos, self.home) > bestDist:
 
                     for action in actions:
 
@@ -238,10 +256,19 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                             bestDist = dist
                             safeCapsule = True
 
-        if (not safeCapsule and ghostClose and gameState.getAgentState(self.index).numCarrying > 0) or (
-                len(self.observationHistory) >= 285 and gameState.getAgentState(self.index).numCarrying >= 1) or (
-                gameState.getAgentState(self.index).numCarrying >= 5 and features['distanceToFood'] > 2) or len(
-                foodList) <= 2:
+
+        '''
+        Finds the action that puts pacman closer to home and maintains distance from the ghost or increaces it is called
+        if the capsule is not safe to get to and a ghost is near and the pacman has non returned food 
+        if the agent has less than 15 moves left and has at leat one food
+        if the agent has 5 or more unreturned food and the nearest food is more than two moves away
+        or if the agent only has two reamaining food avalibe to eat.
+        '''
+
+
+        if (not safeCapsule and ghostClose and numCarrying > 0) or (turnsLeft <= 15 and numCarrying >= 1) or (numCarrying >= 5 and features['distanceToFood'] > 2) or foodLeft <= 2:
+            
+
             bestDist = self.getMazeDistance(gameState.getAgentPosition(self.index), self.start)
             ghostDistance1 = features['fleeEnemy']
 
@@ -254,7 +281,8 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                     bestAction = action
                     bestDist = dist
 
-        if gameState.getAgentState(self.index).numCarrying < 1 and ghostClose:
+        #if a ghost is close an agent has no food picks a random food to head towards
+        if gameState.getAgentState(self.index).numCarrying < 1 and ghostClose: 
             if features['distanceToFood'] > 3:
                 if len(foodList) > 0:  # This should always be True,  but better safe than sorry
                     ghostDistance1 = features['fleeEnemy']
@@ -269,48 +297,19 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                         if dist < maxDistance and (ghostDistance2 - ghostDistance1) >= 0.0:
                             bestAction = action
                             bestDist = maxDistance
-
-        if gameState.getAgentState(self.index).numCarrying < 3 and gameState.getAgentState(self.index).isPacman:
-
-            if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-                myPos = gameState.getAgentState(self.index).getPosition()
-                minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-                for action in actions:
-                    successor = self.getSuccessor(gameState, action)
-                    pos2 = successor.getAgentPosition(self.index)
-                    dist = self.getMazeDistance(self.start, pos2)
-
-                if dist < minDistance:
-                    bestAction = action
-                    bestDist = minDistance
-        if len(self.observationHistory) > 3:
-            if self.observationHistory[-1].getAgentPosition(self.index) == self.observationHistory[-2].getAgentPosition(
-                    self.index) or gameState.getAgentPosition(self.index) == self.observationHistory[
-                -2].getAgentPosition(self.index):
-                return random.choice(actions)
-
         '''
-        else:
-          foodList = self.getFood(gameState, action)
-          for action in actions:
-         '''
-        if foodLeft <= 2:
-            bestDist = 9999
-            for action in actions:
-                successor = self.getSuccessor(gameState, action)
-                pos2 = successor.getAgentPosition(self.index)
-                dist = self.getMazeDistance(self.start, pos2)
-                if dist < bestDist:
-                    bestAction = action
-                    bestDist = dist
+        An override check so the agent doesn't get stuck in a loop or a single spot.
+        '''
+        if len(self.observationHistory) > 3:
+            if self.observationHistory[-1].getAgentPosition(self.index) == self.observationHistory[-2].getAgentPosition(self.index) or gameState.getAgentPosition(self.index) == self.observationHistory[-2].getAgentPosition(self.index):
+                return random.choice(actions)
+        
 
         return bestAction
-        return random.choice(bestActions)
 
     """
-    A reflex agent that seeks food. This is an agent
-    we give you to get an idea of what an offensive agent might look like,
-    but it is by no means the best or only way to build an offensive agent.
+    Returns a Dictonary of ceratin feature for use in chooseAction
+
     """
 
     def getFeatures(self, gameState, action):
@@ -348,6 +347,10 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                 # time.sleep(.25)
         return features
 
+    '''
+    Returns weights for aspects of features Dictonary. 
+    Only used to find way to closest food.
+    '''
     def getWeights(self, gameState, action):
         return {'successorScore': 100, 'distanceToFood': -1}
 
